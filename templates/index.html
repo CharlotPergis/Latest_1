@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Breaker Monitoring Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="bg-glow bg-glow--left"></div>
+<div class="bg-glow bg-glow--right"></div>
+
+<main class="dashboard">
+
+  <header class="dashboard-header">
+    <div class="title-block">
+      <h1><span>⚡ BREAKER</span> MONITORING CENTER</h1>
+      <p>Real-time Circuit Protection & Analytics</p>
+    </div>
+    <div class="header-actions">
+      <div class="system-status-header">
+        <span class="status-label">🖥️ System:</span>
+        <span id="system-status-header" class="status-value-header">Online</span>
+      </div>
+      <div class="live-chip"> LIVE</div>
+      <button id="refresh-btn" class="btn">⟳ Refresh</button>
+    </div>
+  </header>
+
+  <section class="quad-grid">
+    
+    <!-- Temperature -->
+    <article class="card compact-card">
+      <div class="card-header">
+        <p class="kpi__label">🌡️ Temperature</p>
+      </div>
+      <div class="card-body">
+        <div class="value-row">
+          <p class="kpi__value">
+            <span id="temperature-value">--</span> 
+            <span class="unit">°C</span>
+          </p>
+        </div>
+        <div class="graph-container">
+          <canvas id="tempGraph" width="300" height="50" class="line-graph"></canvas>
+        </div>
+        <p id="temperature-note" class="kpi__note">Waiting...</p>
+      </div>
+    </article>
+
+    <!-- Breaker State -->
+    <article class="card compact-card">
+      <div class="card-header">
+        <p class="kpi__label">🔌 Breaker State</p>
+      </div>
+      <div class="card-body">
+        <div class="value-row">
+          <p id="breaker-state" class="kpi__value state">Unknown</p>
+        </div>
+        <div class="breaker-status-indicator" id="breaker-indicator"></div>
+        <div id="time-to-trip-container" style="display: none;">
+          <div class="time-to-trip-header">⚠️ ESTIMATED TRIP TIME</div>
+          <div class="time-to-trip-value" id="time-to-trip-value">--</div>
+          <div class="time-to-trip-note" id="time-to-trip-note"></div>
+        </div>
+        <p id="state-note" class="kpi__note">Waiting...</p>
+      </div>
+    </article>
+
+    <!-- Current -->
+    <article class="card compact-card">
+      <div class="card-header">
+        <p class="kpi__label">⚡ Current</p>
+      </div>
+      <div class="card-body">
+        <div class="value-row">
+          <p class="kpi__value">
+            <span id="current-value">--</span>
+            <span class="unit">A</span>
+          </p>
+        </div>
+        <div class="graph-container">
+          <canvas id="currentGraph" width="300" height="50" class="line-graph"></canvas>
+        </div>
+        <p id="current-note" class="kpi__note">Waiting...</p>
+      </div>
+    </article>
+
+    <!-- Mitigation -->
+    <article class="card compact-card mitigation-compact" id="mitigationCard">
+      <div class="card-header">
+        <p class="kpi__label">🛡️ Suggestion & Mitigation</p>
+      </div>
+      <div class="card-body">
+        <div id="suggestion-main" class="suggestion-compact">💡 Analyzing...</div>
+        <div id="mitigation-action-box" class="mitigation-action-compact">
+          <span>🔧</span> 
+          <strong id="action-text">Standby</strong>
+        </div>
+        <div id="risk-badge-container" class="risk-badge-compact"></div>
+      </div>
+    </article>
+
+  </section>
+
+  <!-- History Table -->
+  <section class="history-row">
+    <div class="history__header">
+      <h2>📋 Recent Events</h2>
+      <a href="/full_history.html" class="btn btn-small">📜 Full History</a>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Time</th><th>Temp</th><th>Current</th><th>State</th><th>Status</th></tr>
+        </thead>
+        <tbody id="log-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<div id="toast-container"></div>
+
+<script src="/static/dashboard.js"></script>
+</body>
+</html>

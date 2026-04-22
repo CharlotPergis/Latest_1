@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Full History - Breaker Monitoring</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0f172a;
+      color: #f1f5f9;
+      min-height: 100vh;
+    }
+
+    .dashboard {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .history-header h1 {
+  font-size: 28px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #e0f2fe, #a5f3fc);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+    .subtext {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 5px;
+    }
+
+    .btn-back {
+      background: #ef4444;
+      color: white;
+      text-decoration: none;
+      padding: 10px 24px;
+      border-radius: 50px;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.2s;
+      display: inline-block;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-back:hover {
+      background: #dc2626;
+      transform: translateY(-2px);
+    }
+
+    .filter-section {
+      background: #1e293b;
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-width: 120px;
+    }
+
+    .filter-group label {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-bottom: 4px;
+    }
+
+    .filter-group input, .filter-group select {
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+    }
+
+    .filter-actions {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    .btn, .btn-secondary, .btn-download {
+      padding: 8px 20px;
+      border-radius: 50px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 12px;
+    }
+
+    .btn { background: #0ea5e9; color: white; }
+    .btn-secondary { background: #334155; color: white; }
+    .btn-download { background: #22c55e; color: white; }
+    .btn-small { padding: 4px 12px; font-size: 11px; }
+
+    .quick-filters {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      background: #0f172a;
+      padding: 4px 12px;
+      border-radius: 50px;
+      font-size: 11px;
+    }
+
+    .stats-bar {
+      display: flex;
+      gap: 20px;
+      padding-top: 15px;
+      border-top: 1px solid #334155;
+      font-size: 13px;
+    }
+
+    .table-wrap {
+      background: #1e293b;
+      border-radius: 20px;
+      overflow: auto;
+      max-height: 60vh;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 12px 15px;
+      text-align: left;
+    }
+
+    th {
+      background: #334155;
+      position: sticky;
+      top: 0;
+      font-weight: 600;
+    }
+
+    tr:nth-child(even) { background: #0f172a; }
+    tr:hover { background: #2d3a5e; }
+
+    .state-normal { color: #22c55e; }
+    .state-warning { color: #eab308; }
+    .state-overload { color: #f97316; }
+    .state-danger { color: #ef4444; }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 12px 20px;
+      border-radius: 12px;
+      color: white;
+      font-weight: 600;
+      z-index: 10000;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    @media (max-width: 768px) {
+      .dashboard { padding: 10px; }
+      .history-header { flex-direction: column; text-align: center; }
+      .filter-row { flex-direction: column; }
+      .filter-actions { justify-content: stretch; }
+      .filter-actions button { flex: 1; }
+      th, td { padding: 8px 10px; font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<main class="dashboard">
+
+  <div class="history-header">
+    <div>
+      <h1>⚡ Breaker Monitoring Logs</h1>
+      <p class="subtext">Full historical data with advanced filtering</p>
+    </div>
+    <a href="/" class="btn-back">← Back to Dashboard</a>
+  </div>
+
+  <div class="filter-section">
+    <div class="filter-row">
+      <div class="filter-group">
+        <label>📅 Preset</label>
+        <select id="dateRangePreset">
+          <option value="custom">Custom Range</option>
+          <option value="today">Today</option>
+          <option value="yesterday">Yesterday</option>
+          <option value="week">Last 7 Days</option>
+          <option value="month">Last 30 Days</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Start Date</label>
+        <input type="date" id="startDate">
+      </div>
+      <div class="filter-group">
+        <label>Start Time</label>
+        <input type="time" id="startTime">
+      </div>
+      <div class="filter-group">
+        <label>End Date</label>
+        <input type="date" id="endDate">
+      </div>
+      <div class="filter-group">
+        <label>End Time</label>
+        <input type="time" id="endTime">
+      </div>
+    </div>
+    
+    <div class="filter-row">
+      <div class="filter-group">
+        <label>Status</label>
+        <select id="statusFilter">
+          <option value="all">All Statuses</option>
+          <option value="normal">✅ Normal</option>
+          <option value="warning">⚠️ Potential Overload</option>
+          <option value="overload">🔴 Overload</option>
+          <option value="danger">🔥 Overheating</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Search</label>
+        <input type="text" id="searchInput" placeholder="Search...">
+      </div>
+      <div class="filter-actions">
+        <button id="applyFiltersBtn" class="btn">🔍 Apply Filters</button>
+        <button id="clearFiltersBtn" class="btn-secondary">🗑️ Clear All</button>
+        <button id="downloadCsvBtn" class="btn-download">📥 Download CSV</button>
+      </div>
+    </div>
+    
+    <div class="quick-filters">
+      <span class="badge">⚡ Quick Filters:</span>
+      <button id="quick1h" class="btn-small">Last Hour</button>
+      <button id="quick24h" class="btn-small">Last 24 Hours</button>
+      <button id="quick7d" class="btn-small">Last 7 Days</button>
+    </div>
+    
+    <div class="stats-bar">
+      <span>📋 Total Logs: <strong id="total-count">0</strong></span>
+      <span>🎯 Filtered: <strong id="filtered-count">0</strong></span>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Date & Time</th>
+          <th>Temperature (°C)</th>
+          <th>Current (A)</th>
+          <th>Breaker State</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="full-log-body"></tbody>
+    </table>
+  </div>
+
+</main>
+
+<script>
+(function() {
+  // DOM Elements
+  const fullLogBody = document.getElementById("full-log-body");
+  const totalCountSpan = document.getElementById("total-count");
+  const filteredCountSpan = document.getElementById("filtered-count");
+  const startDateInput = document.getElementById("startDate");
+  const endDateInput = document.getElementById("endDate");
+  const startTimeInput = document.getElementById("startTime");
+  const endTimeInput = document.getElementById("endTime");
+  const statusFilter = document.getElementById("statusFilter");
+  const searchInput = document.getElementById("searchInput");
+  const dateRangePreset = document.getElementById("dateRangePreset");
+  const applyFiltersBtn = document.getElementById("applyFiltersBtn");
+  const clearFiltersBtn = document.getElementById("clearFiltersBtn");
+  const downloadCsvBtn = document.getElementById("downloadCsvBtn");
+  const quick1h = document.getElementById("quick1h");
+  const quick24h = document.getElementById("quick24h");
+  const quick7d = document.getElementById("quick7d");
+
+  let allLogs = [];
+  let currentFilteredLogs = [];
+
+  // Helper functions
+  function parseTimestamp(timestamp) {
+    if (!timestamp) return new Date();
+    const date = new Date(timestamp);
+    return isNaN(date.getTime()) ? new Date() : date;
+  }
+
+  function formatDisplayDate(dateObj) {
+    if (!dateObj || isNaN(dateObj.getTime())) return "Invalid Date";
+    return dateObj.toLocaleString();
+  }
+
+  function createDateFromInputs(dateValue, timeValue) {
+    if (!dateValue) return null;
+    const timeStr = timeValue || "00:00";
+    return new Date(`${dateValue}T${timeStr}:00`);
+  }
+
+  // Apply filters
+  function applyAllFilters() {
+    let filtered = [...allLogs];
+    
+    // Date range filter
+    const startDate = startDateInput?.value;
+    const endDate = endDateInput?.value;
+    const startTime = startTimeInput?.value;
+    const endTime = endTimeInput?.value;
+    
+    if (startDate) {
+      const startDateTime = createDateFromInputs(startDate, startTime);
+      if (startDateTime) {
+        filtered = filtered.filter(log => parseTimestamp(log.timestamp) >= startDateTime);
+      }
+    }
+    if (endDate) {
+      const endDateTime = createDateFromInputs(endDate, endTime);
+      if (endDateTime) {
+        filtered = filtered.filter(log => parseTimestamp(log.timestamp) <= endDateTime);
+      }
+    }
+    
+    // Status filter
+    const status = statusFilter?.value || "all";
+    if (status !== "all") {
+      filtered = filtered.filter(log => {
+        if (status === "normal") return log.breakerState === "Normal";
+        if (status === "warning") return log.breakerState === "Potential Overload";
+        if (status === "overload") return log.breakerState === "Overload";
+        if (status === "danger") return log.breakerState === "Overheating";
+        return true;
+      });
+    }
+    
+    // Search filter
+    const searchTerm = searchInput?.value.toLowerCase().trim() || "";
+    if (searchTerm) {
+      filtered = filtered.filter(log => {
+        return (log.breakerState || "").toLowerCase().includes(searchTerm) ||
+               (log.systemStatus || "").toLowerCase().includes(searchTerm) ||
+               (log.temperature || 0).toString().includes(searchTerm) ||
+               (log.current || 0).toString().includes(searchTerm);
+      });
+    }
+    
+    currentFilteredLogs = filtered;
+    renderTable();
+    updateStats();
+  }
+
+  function updateStats() {
+    if (totalCountSpan) totalCountSpan.textContent = allLogs.length;
+    if (filteredCountSpan) filteredCountSpan.textContent = currentFilteredLogs.length;
+  }
+
+  // Load data from localStorage
+  function loadData() {
+    try {
+      const stored = localStorage.getItem("breakerFullHistory");
+      allLogs = stored ? JSON.parse(stored) : [];
+      
+      // Sort by timestamp descending (newest first)
+      allLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      
+      currentFilteredLogs = [...allLogs];
+      renderTable();
+      updateStats();
+      
+      console.log(`Loaded ${allLogs.length} logs from history`);
+    } catch (error) {
+      console.error("Error loading data:", error);
+      allLogs = [];
+      currentFilteredLogs = [];
+      renderTable();
+    }
+  }
+
+  // Render table
+  function renderTable() {
+    if (!fullLogBody) return;
+    fullLogBody.innerHTML = "";
+    
+    if (currentFilteredLogs.length === 0) {
+      const emptyRow = document.createElement("tr");
+      emptyRow.innerHTML = '<td colspan="5" style="text-align:center; padding:48px;">📭 No logs found. Data will appear as the dashboard runs.<\/td>';
+      fullLogBody.appendChild(emptyRow);
+      return;
+    }
+    
+    currentFilteredLogs.forEach(log => {
+      let stateClass = "state-normal";
+      let stateIcon = "";
+      
+      if (log.breakerState === "Overheating") {
+        stateClass = "state-danger";
+        stateIcon = "🔥 ";
+      } else if (log.breakerState === "Overload") {
+        stateClass = "state-overload";
+        stateIcon = "⚠️ ";
+      } else if (log.breakerState === "Potential Overload") {
+        stateClass = "state-warning";
+        stateIcon = "⚡ ";
+      } else {
+        stateClass = "state-normal";
+        stateIcon = "✅ ";
+      }
+      
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${formatDisplayDate(parseTimestamp(log.timestamp))}</td>
+        <td><strong>${log.temperature.toFixed(1)}°C</strong></td>
+        <td><strong>${log.current.toFixed(1)}A</strong></td>
+        <td class="${stateClass}">${stateIcon}${log.breakerState}</td>
+        <td>${log.systemStatus || '—'}</td>
+      `;
+      fullLogBody.appendChild(row);
+    });
+  }
+
+  // Clear all filters
+  function clearAllFilters() {
+    if (startDateInput) startDateInput.value = "";
+    if (endDateInput) endDateInput.value = "";
+    if (startTimeInput) startTimeInput.value = "";
+    if (endTimeInput) endTimeInput.value = "";
+    if (statusFilter) statusFilter.value = "all";
+    if (searchInput) searchInput.value = "";
+    if (dateRangePreset) dateRangePreset.value = "custom";
+    
+    currentFilteredLogs = [...allLogs];
+    renderTable();
+    updateStats();
+    showToast("✅ All filters cleared");
+  }
+
+  // Show toast notification
+  function showToast(message, isError = false) {
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.style.backgroundColor = isError ? '#ef4444' : '#22c55e';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+      if (toast.parentNode) toast.remove();
+    }, 3000);
+  }
+
+  // Download CSV
+  function downloadCSV() {
+    if (currentFilteredLogs.length === 0) {
+      showToast("⚠️ No logs available to download", true);
+      return;
+    }
+    
+    try {
+      const headers = ["Date Time", "Temperature (°C)", "Current (A)", "Breaker State", "Status"];
+      const csvRows = [headers];
+      
+      currentFilteredLogs.forEach(log => {
+        csvRows.push([
+          formatDisplayDate(parseTimestamp(log.timestamp)),
+          log.temperature.toFixed(1),
+          log.current.toFixed(1),
+          log.breakerState,
+          log.systemStatus || "N/A"
+        ]);
+      });
+      
+      const csvContent = csvRows.map(row => 
+        row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",")
+      ).join("\n");
+      
+      const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+      
+      link.href = url;
+      link.download = `breaker_logs_${timestamp}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      showToast(`✅ Downloaded ${currentFilteredLogs.length} logs successfully!`);
+    } catch (error) {
+      console.error("CSV Download error:", error);
+      showToast("❌ Error downloading CSV", true);
+    }
+  }
+
+  // Quick filter by hours
+  function filterByHours(hours) {
+    const cutoff = new Date(Date.now() - hours * 3600000);
+    if (startDateInput) {
+      startDateInput.value = cutoff.toISOString().split('T')[0];
+      if (startTimeInput) startTimeInput.value = cutoff.toTimeString().slice(0,5);
+    }
+    if (endDateInput) endDateInput.value = "";
+    if (endTimeInput) endTimeInput.value = "";
+    if (statusFilter) statusFilter.value = "all";
+    if (searchInput) searchInput.value = "";
+    if (dateRangePreset) dateRangePreset.value = "custom";
+    
+    applyAllFilters();
+    showToast(`📊 Showing logs from last ${hours} hour${hours > 1 ? 's' : ''}`);
+  }
+
+  // Set date range preset
+  function setDateRangePreset(preset) {
+    const now = new Date();
+    let start = null;
+    let end = null;
+    
+    switch(preset) {
+      case "today":
+        start = new Date(now);
+        start.setHours(0, 0, 0, 0);
+        end = new Date(now);
+        end.setHours(23, 59, 59, 999);
+        break;
+      case "yesterday":
+        start = new Date(now);
+        start.setDate(start.getDate() - 1);
+        start.setHours(0, 0, 0, 0);
+        end = new Date(start);
+        end.setHours(23, 59, 59, 999);
+        break;
+      case "week":
+        start = new Date(now);
+        start.setDate(start.getDate() - 7);
+        start.setHours(0, 0, 0, 0);
+        end = null;
+        break;
+      case "month":
+        start = new Date(now);
+        start.setMonth(start.getMonth() - 1);
+        start.setHours(0, 0, 0, 0);
+        end = null;
+        break;
+      default:
+        return;
+    }
+    
+    if (start && startDateInput) {
+      startDateInput.value = start.toISOString().split('T')[0];
+      if (startTimeInput) startTimeInput.value = "00:00";
+    }
+    if (end && endDateInput) {
+      endDateInput.value = end.toISOString().split('T')[0];
+      if (endTimeInput) endTimeInput.value = "23:59";
+    }
+    
+    applyAllFilters();
+  }
+
+  // Auto-refresh data
+  function startAutoRefresh() {
+    setInterval(() => {
+      try {
+        const stored = localStorage.getItem("breakerFullHistory");
+        if (stored) {
+          const newData = JSON.parse(stored);
+          if (newData.length !== allLogs.length) {
+            loadData();
+          }
+        }
+      } catch (e) {
+        console.error("Auto-refresh error:", e);
+      }
+    }, 5000);
+  }
+
+  // Event listeners
+  if (applyFiltersBtn) applyFiltersBtn.addEventListener("click", applyAllFilters);
+  if (clearFiltersBtn) clearFiltersBtn.addEventListener("click", clearAllFilters);
+  if (downloadCsvBtn) downloadCsvBtn.addEventListener("click", downloadCSV);
+  if (quick1h) quick1h.addEventListener("click", () => filterByHours(1));
+  if (quick24h) quick24h.addEventListener("click", () => filterByHours(24));
+  if (quick7d) quick7d.addEventListener("click", () => filterByHours(168));
+  
+  if (statusFilter) statusFilter.addEventListener("change", applyAllFilters);
+  
+  if (searchInput) {
+    let searchTimeout;
+    searchInput.addEventListener("input", () => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(applyAllFilters, 300);
+    });
+  }
+  
+  if (dateRangePreset) {
+    dateRangePreset.addEventListener("change", (e) => {
+      if (e.target.value !== "custom") {
+        setDateRangePreset(e.target.value);
+      }
+    });
+  }
+  
+  if (startDateInput) startDateInput.addEventListener("change", applyAllFilters);
+  if (endDateInput) endDateInput.addEventListener("change", applyAllFilters);
+  if (startTimeInput) startTimeInput.addEventListener("change", applyAllFilters);
+  if (endTimeInput) endTimeInput.addEventListener("change", applyAllFilters);
+  
+  // Listen for storage events from dashboard
+  window.addEventListener("storage", (event) => {
+    if (event.key === "breakerFullHistory") {
+      loadData();
+    }
+  });
+  
+  // Initialize
+  loadData();
+  startAutoRefresh();
+})();
+</script>
+</body>
+</html>
