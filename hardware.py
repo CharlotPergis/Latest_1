@@ -3,11 +3,9 @@ import time
 import RPi.GPIO as GPIO
 from RPLCD.i2c import CharLCD
 
-# =====================
-# CONFIG
-# =====================
-FLASK_URL = "http://127.0.0.1:5000/api/simulate"
-
+# ======================
+# GPIO SETUP
+# ======================
 GREEN_LED = 17
 RED_LED = 27
 
@@ -15,99 +13,84 @@ GPIO.setmode(GPIO.BCM)
 GPIO.setup(GREEN_LED, GPIO.OUT)
 GPIO.setup(RED_LED, GPIO.OUT)
 
-# =====================
-# LCD (20x4 I2C)
-# =====================
-lcd = CharLCD(
-    i2c_expander='PCF8574',
-    address=0x27,      # change if needed (0x3F common alternative)
-    cols=20,
-    rows=4
-)
-
+# ======================
+# LCD SETUP (4x20 I2C)
+# ======================
+lcd = CharLCD('PCF8574', 0x27, cols=20, rows=4)
 lcd.clear()
 
-# =====================
-# BLINK CONTROL
-# =====================
-blink_state = False
+FLASK_URL = "http://127.0.0.1:5000/api/simulate"
 
-# =====================
-# UPDATE OUTPUTS
-# =====================
-def update_outputs(data, blink_state):
-    temp = data.get("temperature", 0)
-    current = data.get("current", 0)
-    state = data.get("breakerState", "Unknown")
-    mode = data.get("simulation_mode", "")
 
-    # =====================
-    # LED LOGIC
-    # =====================
-    if state == "Overheating":
+# ======================
+# LED CONTROL
+# ======================
+def set_leds(state, blink=False):
+    if state == "Overheating" and blink:
         GPIO.output(GREEN_LED, 0)
-        GPIO.output(RED_LED, blink_state)  # BLINKING RED
-
+        GPIO.output(RED_LED, 1)
+        time.sleep(0.3)
+        GPIO.output(RED_LED, 0)
+        time.sleep(0.3)
+    elif state == "Overheating":
+        GPIO.output(GREEN_LED, 0)
+        GPIO.output(RED_LED, 1)
     elif state == "Overload":
         GPIO.output(GREEN_LED, 0)
-        GPIO.output(RED_LED, 1)  # SOLID RED
-
+        GPIO.output(RED_LED, 1)
     else:
         GPIO.output(GREEN_LED, 1)
         GPIO.output(RED_LED, 0)
 
-    # =====================
-    # LCD 20x4 DISPLAY
-    # =====================
+
+# ======================
+# LCD DISPLAY
+# ======================
+def update_lcd(temp, current, state):
     lcd.clear()
+    lcd.write_string(f"Temp: {temp:.1f}C")
+    lcd.cursor_pos = (1, 0)
+    lcd.write_string(f"Current: {current:.1f}A")
+    lcd.cursor_pos = (2, 0)
+    lcd.write_string(f"State: {state}")
 
-    lcd.write_string(f"STATE: {state}\n")
-    lcd.write_string(f"TEMP : {temp:.1f} C\n")
-    lcd.write_string(f"CURR : {current:.1f} A\n")
-    lcd.write_string(f"MODE : {mode}")
 
-
-# =====================
+# ======================
 # MAIN LOOP
-# =====================
+# ======================
 def run():
-    global blink_state
-
-    print("🚀 Hardware running (20x4 LCD + Blink RED mode)")
+    print("System running...")
 
     while True:
         try:
-            response = requests.get(FLASK_URL, timeout=5)
-            data = response.json()
+            res = requests.get(FLASK_URL, timeout=5)
+            data = res.json()
 
-            # toggle blink only for overheating
-            if data.get("breakerState") == "Overheating":
-                blink_state = not blink_state
+            temp = data["temperature"]
+            current = data["current"]
+            state = data["breakerState"]
+
+            # LED behavior
+            if state == "Overheating":
+                set_leds(state, blink=True)
             else:
-                blink_state = False
+                set_leds(state)
 
-            update_outputs(data, blink_state)
+            # LCD update
+            update_lcd(temp, current, state)
 
-            print(
-                f"[{data['simulation_mode']}] "
-                f"{data['temperature']}°C | {data['current']}A | {data['breakerState']}"
-            )
+            print(f"{state} | {temp}°C | {current}A")
 
         except Exception as e:
-            print("❌ Connection error:", e)
-
+            print("Error:", e)
             GPIO.output(GREEN_LED, 0)
-            GPIO.output(RED_LED, 0)
-
+            GPIO.output(RED_LED, 1)
             lcd.clear()
-            lcd.write_string("NO SIGNAL\nCHECK FLASK")
+            lcd.write_string("SYSTEM ERROR")
 
-        time.sleep(0.7)  # faster refresh for smoother blinking
+        time.sleep(1)
 
 
-# =====================
-# CLEAN EXIT
-# =====================
 if __name__ == "__main__":
     try:
         run()
